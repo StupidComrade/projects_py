@@ -15,7 +15,7 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Спектрометр")
-        self.root.geometry('620x300')
+        self.root.geometry('720x300')
 
         self.rm = pyvisa.ResourceManager()
         self.device = None
