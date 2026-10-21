@@ -287,7 +287,7 @@ class App:
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         self.line, = self.ax.plot([], [], 'b-', linewidth=1.5)
-        self.line.set_data(np.array(time_axis).astype(np.float)*1e6, voltage)
+        self.line.set_data(np.array(time_axis).astype(float)*1e6, voltage)
         self.ax.relim()
         self.ax.autoscale_view()
         self.figure.tight_layout()
@@ -503,9 +503,9 @@ class App:
         q = 2**15 - 1      
         sine_value1 = (np.sin(t1) * 1 * q)
         sine_value2 = (np.sin(t2) * 1 * q)
-        normalized1 = np.round(sine_value1).astype(np.int)
-        normalized2 = np.round(sine_value2).astype(np.int)
-        arrdel = np.zeros(ndel).astype(np.int)
+        normalized1 = np.round(sine_value1).astype(int)
+        normalized2 = np.round(sine_value2).astype(int)
+        arrdel = np.zeros(ndel).astype(int)
         res = np.concatenate([normalized1, arrdel, normalized2])
         self.loaded_data = res
         self.status.config(text="Загружено")
@@ -546,7 +546,7 @@ class App:
 
             signal = signal/np.max(np.abs(signal))
             q = 2**15 - 1
-            value = np.round(signal * q).astype(np.int)
+            value = np.round(signal * q).astype(int)
             samplebytes = struct.pack('<' + 'h' * len(value), *value)
             xcount = 32768
             self.device.write(':OUTP{} OFF'.format(channel))
