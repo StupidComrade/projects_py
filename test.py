@@ -81,20 +81,19 @@ def load_dac(loaded_data, samplerate):
     device.write(':SOUR{}:BURS:TDEL {}'.format(channel, delay/2))
 
 
-f = 1e6
-tau1 = (1/f)*20
+f = 7e6
+tau1 = 10e-6
 samplerate = 60e6
 n1 = round((tau1*samplerate))
 N = n1
 c1 = round(n1*f/samplerate)
 t1 = np.linspace(0, c1*2*np.pi, n1)
 
-tau_win = (1/f)*4.5
-sigma = tau_win/50
-min_val = 0.9
+tau_win = (1/f)*10 # период огибающей
+sigma = tau_win/10 # ширина огибающей
+min_val = 0.9 # управление высотой пика
 t = np.linspace(0, tau1, n1)
 window = gaussian_win(t, tau_win, sigma=sigma, min_val=min_val, amplitude=1)
-#window = 0.2 + (0.9 - 0.2) * (1.0 - window)
 q = 2**15 - 1      
 sine_value1 = (np.sin(t1) * window * q)
 normalized1 = np.round(sine_value1).astype(int)
