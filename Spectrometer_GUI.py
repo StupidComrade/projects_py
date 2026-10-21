@@ -527,9 +527,9 @@ class App:
         #    messagebox.showwarning("Предупреждение","А где файл? :(")
 
     def rigol_len(self, length):
-	    rtxt = "#"
-	    rtxt += str(len(str(length))) + str(length)
-	    return rtxt
+        rtxt = "#"
+        rtxt += str(len(str(length))) + str(length)
+        return rtxt
 
     def load_dac(self):
         if (self.srate.get() == "") or (self.file_path == " ") or (self.chan.get() == ""):
