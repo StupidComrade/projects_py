@@ -17,10 +17,8 @@ def gaussian_win(t, tau_env, sigma, min_val=0.1,
     g      = np.exp(-((t_mod - center) ** 2) / (2.0 * sigma ** 2))
     g_edge = np.exp(-half ** 2 / (2.0 * sigma ** 2))
 
-   # if g_edge >= 1.0 - 1e-15:          
-   #     return amplitude * np.ones_like(t)
-
-    env = min_val + (1.0 - min_val) * (g - g_edge) / (1.0 - g_edge)
+    env = (g - g_edge) / (1.0 - g_edge)
+    env = min_val + (1 - min_val) * (1 - env)
     return amplitude * env
 
 
@@ -83,7 +81,7 @@ def load_dac(loaded_data, samplerate):
     device.write(':SOUR{}:BURS:TDEL {}'.format(channel, delay/2))
 
 
-f = 7e6
+f = 1e6
 tau1 = (1/f)*20
 samplerate = 60e6
 n1 = round((tau1*samplerate))
@@ -91,16 +89,18 @@ N = n1
 c1 = round(n1*f/samplerate)
 t1 = np.linspace(0, c1*2*np.pi, n1)
 
-tau_win = (1/f)*5
-sigma = tau_win*10
-min_val = 0.5
+tau_win = (1/f)*4.5
+sigma = tau_win/50
+min_val = 0.9
 t = np.linspace(0, tau1, n1)
-window = gaussian_win(t, tau_win, sigma=sigma, min_val=min_val)
+window = gaussian_win(t, tau_win, sigma=sigma, min_val=min_val, amplitude=1)
+#window = 0.2 + (0.9 - 0.2) * (1.0 - window)
 q = 2**15 - 1      
 sine_value1 = (np.sin(t1) * window * q)
 normalized1 = np.round(sine_value1).astype(int)
 
 load_dac(normalized1, samplerate)
 
-plt.plot(t, normalized1)
+plt.plot(t, window*np.sin(t1))
+plt.plot(t, window)
 plt.show()
