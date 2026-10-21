@@ -270,7 +270,7 @@ class App:
                 is_big_endian=False,
                 container=np.array
             )
-            voltage = (data - yreference) * yincrement + yorigin
+            voltage = (data + np.abs(yorigin) - yreference) * yincrement
             time_axis = [xorigin + i * xincrement for i in range(len(voltage))]
             if self.chk4_var.get() == 1:
                 out_dir = Path(__file__).resolve().parent / "tests" / "1"
