@@ -12,9 +12,9 @@ def gaussian_win(t, tau_env, sigma, min_val=0.1,
 
     t_mod = (t - t_start) % tau_env
     center = 0.5 * tau_env
-    half   = 0.5 * tau_env
+    half = 0.5 * tau_env
 
-    g      = np.exp(-((t_mod - center) ** 2) / (2.0 * sigma ** 2))
+    g = np.exp(-((t_mod - center) ** 2) / (2.0 * sigma ** 2))
     g_edge = np.exp(-half ** 2 / (2.0 * sigma ** 2))
 
     env = (g - g_edge) / (1.0 - g_edge)
@@ -68,21 +68,21 @@ def load_dac(loaded_data, samplerate):
     device.write_raw(header.encode('utf-8') + rigol_len(len(samplebytes)).encode('utf-8') + samplebytes)
     time.sleep(0.2)
 
-    delay = 0
-    device.write(':SOUR{}:BURS ON'.format(channel))
-    while ( device.query('*OPC?') != '1\n'):
-        time.sleep(0.1)
-    device.write(':SOUR{}:BURS:MODE TRIG'.format(channel))
+    # delay = 0
+    # device.write(':SOUR{}:BURS ON'.format(channel))
+    # while ( device.query('*OPC?') != '1\n'):
+    #     time.sleep(0.1)
+    # device.write(':SOUR{}:BURS:MODE TRIG'.format(channel))
     device.write(':OUTP{} ON'.format(channel))
-    device.write(':SOUR{}:BURS:NCYC 1'.format(channel))
-    device.write(':SOUR{}:BURS:TRIG:SOUR MAN'.format(channel))
-    device.write(':OUTP{}:SYNC 1'.format(channel))
-    device.write(':OUTP{}:SYNC:POL POS'.format(channel))
-    device.write(':SOUR{}:BURS:TDEL {}'.format(channel, delay/2))
+    # device.write(':SOUR{}:BURS:NCYC 1'.format(channel))
+    # device.write(':SOUR{}:BURS:TRIG:SOUR MAN'.format(channel))
+    # device.write(':OUTP{}:SYNC 1'.format(channel))
+    # device.write(':OUTP{}:SYNC:POL POS'.format(channel))
+    # device.write(':SOUR{}:BURS:TDEL {}'.format(channel, delay/2))
 
 
 f = 7e6
-tau1 = 10e-6
+tau1 = 1000e-6
 samplerate = 60e6
 n1 = round((tau1*samplerate))
 N = n1
@@ -90,8 +90,8 @@ c1 = round(n1*f/samplerate)
 t1 = np.linspace(0, c1*2*np.pi, n1)
 
 tau_win = (1/f)*10 # период огибающей
-sigma = tau_win/10 # ширина огибающей
-min_val = 0.9 # управление высотой пика
+sigma = tau_win/50 # ширина огибающей
+min_val = 0.90 # управление высотой пика
 t = np.linspace(0, tau1, n1)
 window = gaussian_win(t, tau_win, sigma=sigma, min_val=min_val, amplitude=1)
 q = 2**15 - 1      
@@ -100,6 +100,6 @@ normalized1 = np.round(sine_value1).astype(int)
 
 load_dac(normalized1, samplerate)
 
-plt.plot(t, window*np.sin(t1))
-plt.plot(t, window)
-plt.show()
+# plt.plot(t, window*np.sin(t1))
+# plt.plot(t, window)
+# plt.show()
