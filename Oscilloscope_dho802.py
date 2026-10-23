@@ -35,22 +35,30 @@ class App:
         self.notebook.add(self.utility, text="Настройки")
 
         self.btn_con = ttk.Button(self.utility, text="Обновить", command=self.update_list)
-        self.btn_con.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+        self.btn_con.grid(row=0, column=5, padx=5, pady=5, sticky="w")
 
         self.label3 = ttk.Label(self.utility, text="Осциллограф")
         self.label3.grid(row=0, column=0, padx=5, pady=5, sticky="w")
         # выбор осц
         self.combo1 = ttk.Combobox(self.utility, state='readonly', width=30)
-        self.combo1.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.combo1.grid(row=0, column=1, columnspan=3, padx=5, pady=5, sticky="w")
         # подключение к осц
         self.btn_con_osc = ttk.Button(self.utility, text="Подключиться", command=self.connect_osc)
-        self.btn_con_osc.grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.btn_con_osc.grid(row=0, column=4, padx=5, pady=5, sticky="w")
 
         self.status1 = ttk.Label(self.utility, text="Отключено")
-        self.status1.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.status1.grid(row=1, column=0, padx=0, pady=0)
+        # выбор длины памяти
+        self.status_mem_depth = Label(self.utility, text="Длина памяти:")
+        self.status_mem_depth.grid(row=1, column=1, padx=0, pady=0, sticky="w")
+        self.selected_mem_depth_options = tk.StringVar()
+        self.selected_mem_depth_options.set("10M")
+        self.mem_depth_options = {"1k":1e3, "10k":1e4, "100k":1e5, "1M":1e6, "10M":1e7, "25M":25e6}
+        self.opt_menu_mem_depth = OptionMenu(self.utility, self.selected_mem_depth_options, *self.mem_depth_options.keys(), command=self.mem_depth)
+        self.opt_menu_mem_depth.grid(row=1, column=2, padx=0, pady=0, sticky="w")
         # загрузка отсчётов с памяти осц и построение графика
         self.btn_save_meas = ttk.Button(self.utility, text="Вывести осциллограмму", command=self.save_meas_osc)
-        self.btn_save_meas.grid(row=1, column=1, padx=25, pady=5, sticky="w")
+        self.btn_save_meas.grid(row=2, column=1, columnspan=3, padx=5, pady=5, sticky="w")
 
         self.oscilloscope_frame = ttk.Frame(self.notebook)
         self.oscilloscope_frame.pack(fill=BOTH, expand=True)
@@ -62,10 +70,10 @@ class App:
 
         self.chk4_var = tk.IntVar()
         self.chk4 = tk.Checkbutton(self.utility, text="Сохранить в файл", variable=self.chk4_var)
-        self.chk4.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+        self.chk4.grid(row=3, column=1, columnspan=3, padx=5, pady=5, sticky="w")
 
         self.btn_fft_sum = ttk.Button(self.utility, text="Накопить", command=self.sum_fft)
-        self.btn_fft_sum.grid(row=3, column=1, padx=25, pady=5, sticky="w")
+        self.btn_fft_sum.grid(row=4, column=1, padx=5, pady=5, sticky="w")
 
         self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
 
@@ -80,6 +88,11 @@ class App:
         else:
             self.root.geometry('620x300')
             self.root.attributes('-fullscreen', False)
+
+    def mem_depth(self, event):
+        dots = int(self.mem_depth_options[self.selected_mem_depth_options.get()])
+        self.device_osc.write(":ACQuire:MDEPth {}".format(dots))
+        
 
 
     def update_list(self):
@@ -96,7 +109,7 @@ class App:
                 self.device_osc.write('*RST')
                 time.sleep(1)
                 self.device_osc.write(":STOP")
-                dots = 1000000  # 1k 10k 100k(opt) 1M 10M 25M
+                dots = int(self.mem_depth_options[self.selected_mem_depth_options.get()])  # 1k 10k 100k(opt) 1M 10M 25M
                 self.device_osc.write(":ACQuire:MDEPth {}".format(dots))  # количество точек
                 self.device_osc.write(":TRIGger:MODE EDGE")
                 time.sleep(0.1)
@@ -247,7 +260,7 @@ class App:
             pass
 
     def sum_fft(self):
-        L = 20
+        L = 5
         while self.count_sum_fft < L:
             self.trigger()
             time.sleep(0.3)
@@ -333,7 +346,7 @@ class App:
             time.sleep(0.1)
             self.device_osc.write(":STOP")
         else:
-                messagebox.showwarning("Предупреждение", "Сначала включите функцию Burst")
+                messagebox.showwarning("Предупреждение", "Подключите устройство")
 
 
 
