@@ -4,7 +4,6 @@ from tkinter import ttk, filedialog, messagebox
 import pyvisa
 import numpy as np
 import time
-import struct
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
@@ -16,7 +15,7 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Осциллограф")
-        self.root.geometry('720x300')
+       # self.root.geometry('500x300')
 
         self.rm = pyvisa.ResourceManager()
         self.device = None
@@ -48,14 +47,21 @@ class App:
 
         self.status1 = ttk.Label(self.utility, text="Отключено")
         self.status1.grid(row=1, column=0, padx=0, pady=0)
+
+        # autoset
+        self.btn_autoset = ttk.Button(self.utility, text="Autoset", command=self.autoset)
+        self.btn_autoset.grid(row=1, column=4, padx=0, pady=0)
+
         # выбор длины памяти
-        self.status_mem_depth = Label(self.utility, text="Длина памяти:")
+        self.status_mem_depth = ttk.Label(self.utility, text="Длина памяти:")
         self.status_mem_depth.grid(row=1, column=1, padx=0, pady=0, sticky="w")
+
         self.selected_mem_depth_options = tk.StringVar()
         self.selected_mem_depth_options.set("10M")
         self.mem_depth_options = {"1k":1e3, "10k":1e4, "100k":1e5, "1M":1e6, "10M":1e7, "25M":25e6}
         self.opt_menu_mem_depth = OptionMenu(self.utility, self.selected_mem_depth_options, *self.mem_depth_options.keys(), command=self.mem_depth)
         self.opt_menu_mem_depth.grid(row=1, column=2, padx=0, pady=0, sticky="w")
+
         # загрузка отсчётов с памяти осц и построение графика
         self.btn_save_meas = ttk.Button(self.utility, text="Вывести осциллограмму", command=self.save_meas_osc)
         self.btn_save_meas.grid(row=2, column=1, columnspan=3, padx=5, pady=5, sticky="w")
@@ -73,7 +79,7 @@ class App:
         self.chk4.grid(row=3, column=1, columnspan=3, padx=5, pady=5, sticky="w")
 
         self.btn_fft_sum = ttk.Button(self.utility, text="Накопить", command=self.sum_fft)
-        self.btn_fft_sum.grid(row=4, column=1, padx=5, pady=5, sticky="w")
+        self.btn_fft_sum.grid(row=1, column=5, padx=5, pady=5, sticky="w")
 
         self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
 
@@ -86,14 +92,21 @@ class App:
             self.root.geometry('1100x600')
             self.root.attributes('-fullscreen', True)
         else:
-            self.root.geometry('620x300')
+            self.root.geometry('520x200')
             self.root.attributes('-fullscreen', False)
 
     def mem_depth(self, event):
-        dots = int(self.mem_depth_options[self.selected_mem_depth_options.get()])
-        self.device_osc.write(":ACQuire:MDEPth {}".format(dots))
+        if self.status1['text'] == "Подключено":
+            dots = int(self.mem_depth_options[self.selected_mem_depth_options.get()])
+            self.device_osc.write(":ACQuire:MDEPth {}".format(dots))
+        else:
+            pass
         
-
+    def autoset(self):
+        if self.status1['text'] == "Подключено":
+            self.device_osc.write(":AUToset:ENAble 1")
+        else:
+            pass
 
     def update_list(self):
         devices = self.rm.list_resources()
@@ -120,6 +133,7 @@ class App:
                 self.device_osc.write(":TRIGger:EDGE:SLOPe NEG")
                 time.sleep(0.1)
                 self.device_osc.write(":TRIGger:EDGE:LEVel 0")
+
 
                 self.device_osc.write(":CHANnel1:DISPlay ON")
                 self.device_osc.write(":CHANnel1:OFFSet 0")
@@ -204,7 +218,7 @@ class App:
         for widget in self.oscilloscope_per.winfo_children():
             widget.destroy()
         f_max_analyze = 30e6
-        nperseg = 25600
+        nperseg = int(self.mem_depth_options[self.selected_mem_depth_options.get()]) // 40              #check
         noverlap = nperseg // 2
         nfft = nperseg * 2
         frequencies, psd = signal.welch(
@@ -286,8 +300,12 @@ class App:
             voltage = (data + np.abs(yorigin) - yreference) * yincrement
             time_axis = [xorigin + i * xincrement for i in range(len(voltage))]
             if self.chk4_var.get() == 1:
-                out_dir = Path(__file__).resolve().parent / "tests" / "1"
-                out_dir.mkdir(parents=True, exist_ok=True)
+                folder = filedialog.askdirectory(title = "Выберите папку")                      #check
+                if not folder:
+                    return
+                out_dir = Path(folder)
+                # out_dir = Path(__file__).resolve().parent / "tests" / "1"
+                # out_dir.mkdir(parents=True, exist_ok=True)
                 file_path = out_dir / f"{self.count_files}.txt"
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write("t (s)\tu (v)\n")
@@ -338,6 +356,7 @@ class App:
 
         toolbar2 = NavigationToolbar2Tk(self.canvas2, self.oscilloscope_per)
         toolbar2.pack(side=tk.TOP, fill=tk.X)
+        self.notebook.select(2)
 
 
     def trigger(self):
