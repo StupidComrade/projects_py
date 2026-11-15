@@ -143,6 +143,58 @@ class App:
         self.btn_fft_sum = ttk.Button(self.utility, text="Накопить", command=self.sum_fft)
         self.btn_fft_sum.grid(row=14, column=4)
 
+        self.search_nmr = ttk.Frame(self.notebook)              #check
+        self.search_nmr.pack(fill=BOTH, expand=True)
+        self.notebook.add(self.search_nmr, text="Поиск")
+
+        self.label_snmr_start = ttk.Label(self.search_nmr, text="Начальная частота:")
+        self.label_snmr_start.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.entry_snmr_start = Entry(self.search_nmr, width=10)
+        self.entry_snmr_start.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.entry_snmr_start.insert(0, "6.8e6")
+
+        self.label_snmr_stop = ttk.Label(self.search_nmr, text="Конечная частота:")
+        self.label_snmr_stop.grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.entry_snmr_stop = Entry(self.search_nmr, width=10)
+        self.entry_snmr_stop.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+        self.entry_snmr_stop.insert(0, "7.1e6")
+
+        self.label_snmr_step = ttk.Label(self.search_nmr, text="Шаг:")
+        self.label_snmr_step.grid(row=0, column=4, padx=5, pady=5, sticky="w")
+        self.entry_snmr_step = Entry(self.search_nmr, width=10)
+        self.entry_snmr_step.grid(row=0, column=5, padx=5, pady=5, sticky="w")
+        self.entry_snmr_step.insert(0, "1e3")
+
+        self.label_snmr_duration = ttk.Label(self.search_nmr, text="Длительность РЧ:")
+        self.label_snmr_duration.grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.entry_snmr_duration = Entry(self.search_nmr, width=10)
+        self.entry_snmr_duration.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+        self.entry_snmr_duration.insert(0, "10e-6")
+
+        self.label_snmr_amplitude = ttk.Label(self.search_nmr, text="Амплитуда:")
+        self.label_snmr_amplitude.grid(row=1, column=2, padx=5, pady=5, sticky="w")
+        self.entry_snmr_amplitude = Entry(self.search_nmr, width=10)
+        self.entry_snmr_amplitude.grid(row=1, column=3, padx=5, pady=5, sticky="w")
+        self.entry_snmr_amplitude.insert(0, "5")
+
+        self.label_snmr_mean_num = ttk.Label(self.search_nmr, text="Количество усреднений:")
+        self.label_snmr_mean_num.grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.entry_snmr_mean_num = Entry(self.search_nmr, width=5)
+        self.entry_snmr_mean_num.grid(row=2, column=1, padx=5, pady=5, sticky="w")
+        self.entry_snmr_mean_num.insert(0, "20")
+
+        self.label_snmr_status = ttk.Label(self.search_nmr, text=" ")
+        self.label_snmr_status.grid(row=2, column=2, columnspan=3, padx=5, pady=5, sticky="w")
+
+        self.btn_snmr_start = ttk.Button(self.search_nmr, text="Начать", command=self.search)
+        self.btn_snmr_start.grid(row=2, column=5, padx=5, pady=5, sticky="w")
+
+        self.chk_var_snmr_search_mode = tk.IntVar()
+        self.chk_snmr_search_mode = tk.Checkbutton(self.utility, text = "Режим поиска", variable = self.chk_var_snmr_search_mode,
+                                                    command=lambda: self.notebook.select(3) if self.chk_var_snmr_search_mode.get() == 1 else None) # обалдеть тернарный оператор ..)
+        self.chk_snmr_search_mode.grid(row=13, column=3, padx=5, pady=5, sticky="e")
+
+
         self.notebook.bind('<<NotebookTabChanged>>', self.on_tab_changed)
 
         self.update_list()
@@ -155,7 +207,7 @@ class App:
              self.root.geometry('1100x600')
              self.root.attributes('-fullscreen', True)
         else:
-            self.root.geometry('630x310')
+            self.root.geometry('630x320')
             self.root.attributes('-fullscreen', False)
 
 
@@ -378,10 +430,10 @@ class App:
 
 
     def sum_fft(self):
-        L = 20
+        L = float(self.entry_snmr_mean_num.get())
         while self.count_sum_fft < L:           
             self.trigger()
-            time.sleep(0.3)
+            time.sleep(0.3)  # задержка для промежутков между экспериментами
             self.device_osc.write(":WAV:SOUR CHAN1")
             self.device_osc.write(":WAV:MODE RAW") 
             self.device_osc.write(":WAV:FORM WORD") 
@@ -405,7 +457,7 @@ class App:
             time_axis = [xorigin + i * xincrement for i in range(len(voltage))]
             if self.chk4_var.get() == 1:
                 if self.count_sum_fft == 0:
-                    folder = filedialog.askdirectory(title = "Выберите папку")                      #check
+                    folder = filedialog.askdirectory(title = "Выберите папку")                    
                 if not folder:
                     return
                 out_dir = Path(folder)
@@ -448,19 +500,39 @@ class App:
         self.ax2.set_ylabel('СПМ (В/sqrt(Гц))')
         self.ax2.set_title('Периодограмма')
         self.ax2.grid(True, alpha=0.3)
+        if self.chk_var_snmr_search_mode.get() == 1:    #check
+            file_path = Path(self.folder_snmr) / f"{self.f_snmr}.png"
+            self.figure2.savefig(file_path, dpi=300)
+        else:
+            self.canvas2 = FigureCanvasTkAgg(self.figure2, master=self.oscilloscope_per)
+            self.canvas2.draw()
+            self.canvas2.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        self.canvas2 = FigureCanvasTkAgg(self.figure2, master=self.oscilloscope_per)
-        self.canvas2.draw()
-        self.canvas2.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            self.ax2.relim()
+            self.ax2.autoscale_view()
+            self.figure2.tight_layout()
 
-        self.ax2.relim()
-        self.ax2.autoscale_view()
-        self.figure2.tight_layout()
+            toolbar2 = NavigationToolbar2Tk(self.canvas2, self.oscilloscope_per)
+            toolbar2.pack(side=tk.TOP, fill=tk.X)
+            self.notebook.select(2)
 
-        toolbar2 = NavigationToolbar2Tk(self.canvas2, self.oscilloscope_per)
-        toolbar2.pack(side=tk.TOP, fill=tk.X)
-        self.notebook.select(2)
-
+    def search(self):    #check
+        self.label_snmr_status.config(text="Идёт измерение")
+        self.folder_snmr = filedialog.askdirectory(title = "Выберите папку") 
+        start = float(self.entry_snmr_start.get())
+        stop = float(self.entry_snmr_stop.get())
+        step = float(self.entry_snmr_step.get())
+        self.f_snmr = start
+        while (self.f_snmr <= stop):
+            self.label_snmr_status.config(text="Идёт измерение на {} Гц".format(self.f_snmr))
+            self.load_file()
+            self.load_dac()
+            self.chk3_var.set(1) # вкл burst
+            self.chk_var.set(1) # вкл канал 1
+            self.sum_fft()
+            self.f_snmr += step
+        self.label_snmr_status.config(text="Завершено")
+        
 
 
     def burst(self):
@@ -510,10 +582,16 @@ class App:
 
 
     def load_file(self):
-        tau1 = float(self.duration.get())
-        tau2 = 0
-        delay = 0
-        f = float(self.frate.get())
+        if self.chk_var_snmr_search_mode.get() == 1:  #check
+            tau1 = float(self.entry_snmr_duration.get())
+            tau2 = 0
+            delay = 0
+            f = float(self.f_snmr)
+        else:
+            tau1 = float(self.duration.get())
+            tau2 = 0
+            delay = 0
+            f = float(self.frate.get())
         samplerate = float(self.srate.get())
         n1 = round(tau1*samplerate)
         n2 = round(tau2*samplerate)
@@ -561,9 +639,12 @@ class App:
         else:
             self.status.config(text="Загрузка сигнала в генератор")
             signal = self.loaded_data
-            a = self.srate.get()
-            samplerate = float(self.srate.get())
-            amplitude = float(self.ampl.get())
+           # a = self.srate.get()
+            samplerate = float(self.srate.get())      
+            if self.chk_var_snmr_search_mode.get() == 1:   #check
+                amplitude = float(self.entry_snmr_amplitude.get())
+            else:
+                amplitude = float(self.ampl.get())
             channel = int(self.chan.get())
             self.device.write(':SOUR{}:BURS OFF'.format(channel))
             self.chk3_var.set(0)
