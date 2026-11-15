@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from scipy import signal
+from pathlib import Path
 
 class App:
     def __init__(self, root):
@@ -58,13 +59,13 @@ class App:
         self.label4.grid(row=5, column=2)
         self.frate = Entry(self.utility)
         self.frate.grid(row=5, column=3)
-        self.frate.insert(0, "7.0e6")
+        self.frate.insert(0, "7.23e6")
         # задать tau
         self.label5 = ttk.Label(self.utility,text = "Длительность:")
         self.label5.grid(row=6, column=2)
         self.duration = Entry(self.utility)
         self.duration.grid(row=6, column=3)
-        self.duration.insert(0, "10.0e-6")
+        self.duration.insert(0, "100.0e-6")
         # задать fd
         self.label1 = ttk.Label(self.utility,text = "Частота дискретизации:")
         self.label1.grid(row=4, column=3)
@@ -76,7 +77,7 @@ class App:
         self.label6.grid(row=7, column=2)
         self.ampl = Entry(self.utility)
         self.ampl.grid(row=7, column=3)
-        self.ampl.insert(0, "0.1")
+        self.ampl.insert(0, "5")
         # выбор канала
         self.label2 = ttk.Label(self.utility,text = "Канал:")
         self.label2.grid(row=3, column=5)
@@ -114,6 +115,15 @@ class App:
 
         self.status1 = ttk.Label(self.utility, text="Отключено")
         self.status1.grid(row=11, column=2)
+        # выбор длины памяти
+        self.status_mem_depth = ttk.Label(self.utility, text="Длина памяти:")
+        self.status_mem_depth.grid(row=11, column=3, padx=0, pady=0, sticky="w")
+
+        self.selected_mem_depth_options = tk.StringVar()
+        self.selected_mem_depth_options.set("1M")
+        self.mem_depth_options = {"1k":1e3, "10k":1e4, "100k":1e5, "1M":1e6, "10M":1e7, "25M":25e6}
+        self.opt_menu_mem_depth = OptionMenu(self.utility, self.selected_mem_depth_options, *self.mem_depth_options.keys(), command=self.mem_depth)
+        self.opt_menu_mem_depth.grid(row=11, column=3, padx=0, pady=0, sticky="e")
         # загрузка отсчётов с памяти осц и построение графика
         self.btn_save_meas = ttk.Button(self.utility, text="Вывести осциллограмму", command=self.save_meas_osc)
         self.btn_save_meas.grid(row=12, column=4)
@@ -145,7 +155,7 @@ class App:
              self.root.geometry('1100x600')
              self.root.attributes('-fullscreen', True)
         else:
-            self.root.geometry('620x300')
+            self.root.geometry('630x310')
             self.root.attributes('-fullscreen', False)
 
 
@@ -168,6 +178,14 @@ class App:
        # if devices:
         self.combo.current(0)
         self.combo1.current(0)
+
+    def mem_depth(self, event):
+        if self.status1['text'] == "Подключено":
+            dots = int(self.mem_depth_options[self.selected_mem_depth_options.get()])
+            self.device_osc.write(":ACQuire:MDEPth {}".format(dots))
+        else:
+            pass
+        
     
     def connect(self):
         if self.btn_con_awg['text'] == "Подключиться":
@@ -202,7 +220,7 @@ class App:
                 self.device_osc.write('*RST')
                 time.sleep(1)
                 self.device_osc.write(":STOP")
-                dots = 1000000   #1k 10k 100k(opt) 1M 10M 25M
+                dots = int(self.mem_depth_options[self.selected_mem_depth_options.get()])   #1k 10k 100k(opt) 1M 10M 25M
                 self.device_osc.write(":ACQuire:MDEPth {}".format(dots)) #количество точек
                 self.device_osc.write(":TRIGger:MODE EDGE")
                 time.sleep(0.1)
@@ -218,7 +236,7 @@ class App:
                 self.device_osc.write(":CHANnel1:OFFSet 0")
                 self.device_osc.write(":CHANnel1:SCALe 0.1")
                 self.device_osc.write(":CHANnel1:COUPling DC")
-                self.device_osc.write(":TIMebase:MAIN:SCALe 10e-6") #время/дел
+                self.device_osc.write(":TIMebase:MAIN:SCALe 500e-6") #время/дел
                 self.device_osc.write(":RUN")                           
                 time.sleep(1)
                 srat =  self.device_osc.query(":ACQuire:SRATe?")
@@ -303,7 +321,7 @@ class App:
         for widget in self.oscilloscope_per.winfo_children():
             widget.destroy()
         f_max_analyze = 30e6  
-        nperseg = 25600 
+        nperseg = int(self.mem_depth_options[self.selected_mem_depth_options.get()]) // 40
         noverlap = nperseg // 2 
         nfft = nperseg * 2  
         frequencies, psd = signal.welch(
@@ -317,11 +335,11 @@ class App:
 
         self.figure2 = Figure(figsize=(12, 4), dpi=100)
         self.ax2 = self.figure2.add_subplot(111)
-        self.ax2.semilogy(freq_filtered/1e6, psd_filtered, 'r-', linewidth=1.5)
-     #   self.ax2.semilogy(frequencies/1e6, np.sqrt(psd)*1e9, 'r-', linewidth=1.5)
+        self.ax2.semilogy(freq_filtered/1e6, np.sqrt(psd_filtered), 'r-', linewidth=1.5)
+       # self.ax2.semilogy(frequencies/1e6, np.sqrt(psd), 'r-', linewidth=1.5)
         self.ax2.set_xlabel('f (МГц)')
-        self.ax2.set_ylabel('СПМ (В²/Гц)')
-      #  self.ax2.set_ylabel('СПМ (нВ/sqrt(Гц))')
+      #  self.ax2.set_ylabel('СПМ (В²/Гц)')
+        self.ax2.set_ylabel('СПМ (В/sqrt(Гц))')
         self.ax2.set_title('Периодограмма Уэлча')
         self.ax2.grid(True, alpha=0.3)
 
@@ -352,7 +370,7 @@ class App:
                     f.write("t (s)\tu (v)\n")
                     
                     for t, v in zip(time_axis, voltage):
-                        f.write(f"{t:.10f}\t{v:.10f}\n")
+                        f.write(f"{t:.6e}\t{v:.6e}\n")
             else:
                 pass
         else:
@@ -386,11 +404,16 @@ class App:
             voltage = (data + np.abs(yorigin) - yreference) * yincrement
             time_axis = [xorigin + i * xincrement for i in range(len(voltage))]
             if self.chk4_var.get() == 1:
-                file_path = 'C:/Users/asus/Desktop/grant/tests/1/{}.txt'.format(self.count_files)
+                if self.count_sum_fft == 0:
+                    folder = filedialog.askdirectory(title = "Выберите папку")                      #check
+                if not folder:
+                    return
+                out_dir = Path(folder)
+                file_path = out_dir / f"{self.count_files}.txt"
                 with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write("t (s)\tu (v)\n")                  
+                    f.write("t (s)\tu (v)\n")
                     for t, v in zip(time_axis, voltage):
-                        f.write(f"{t:.10f}\t{v:.10f}\n")
+                        f.write(f"{t:.6e}\t{v:.6e}\n")
             self.count_files += 1
             window = signal.windows.hann(len(voltage))
            # window = np.ones(len(voltage))
@@ -418,11 +441,11 @@ class App:
 
         self.figure2 = Figure(figsize=(12, 4), dpi=100)
         self.ax2 = self.figure2.add_subplot(111)
-        self.ax2.semilogy(freq_filtered/1e6, psd_filtered, 'r-', linewidth=1.5)
+        self.ax2.semilogy(freq_filtered/1e6, np.sqrt(psd_filtered), 'r-', linewidth=1.5)
       #  self.ax2.semilogy(freq/1e6, np.sqrt(self.fft_sum)*1e9, 'r-', linewidth=1.5)
         self.ax2.set_xlabel('f (МГц)')
-        self.ax2.set_ylabel('СПМ (В²/Гц)')
-     #   self.ax2.set_ylabel('СПМ (нВ/sqrt(Гц))')
+       # self.ax2.set_ylabel('СПМ (В²/Гц)')
+        self.ax2.set_ylabel('СПМ (В/sqrt(Гц))')
         self.ax2.set_title('Периодограмма')
         self.ax2.grid(True, alpha=0.3)
 
@@ -436,6 +459,7 @@ class App:
 
         toolbar2 = NavigationToolbar2Tk(self.canvas2, self.oscilloscope_per)
         toolbar2.pack(side=tk.TOP, fill=tk.X)
+        self.notebook.select(2)
 
 
 

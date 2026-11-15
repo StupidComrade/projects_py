@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from scipy import signal
+from scipy.integrate import simpson
 from pathlib import Path
 
 
@@ -57,7 +58,7 @@ class App:
         self.status_mem_depth.grid(row=1, column=1, padx=0, pady=0, sticky="w")
 
         self.selected_mem_depth_options = tk.StringVar()
-        self.selected_mem_depth_options.set("10M")
+        self.selected_mem_depth_options.set("1M")
         self.mem_depth_options = {"1k":1e3, "10k":1e4, "100k":1e5, "1M":1e6, "10M":1e7, "25M":25e6}
         self.opt_menu_mem_depth = OptionMenu(self.utility, self.selected_mem_depth_options, *self.mem_depth_options.keys(), command=self.mem_depth)
         self.opt_menu_mem_depth.grid(row=1, column=2, padx=0, pady=0, sticky="w")
@@ -104,7 +105,8 @@ class App:
         
     def autoset(self):
         if self.status1['text'] == "Подключено":
-            self.device_osc.write(":AUToset:ENAble 1")
+            self.device_osc.write(':AUToset:ENAble ON')
+            self.device_osc.write(':AUToset')
         else:
             pass
 
@@ -183,7 +185,7 @@ class App:
             is_big_endian=False,
             container=np.array
         )
-        voltage = (data + np.abs(yorigin) - yreference) * yincrement 
+        voltage = ((data + np.abs(yorigin) - yreference) * yincrement)/67.4
         time_axis = [xorigin + i * xincrement for i in range(len(voltage))]
  
         for widget in self.oscilloscope_frame.winfo_children():
@@ -224,7 +226,7 @@ class App:
         frequencies, psd = signal.welch(
             voltage, fs=1 / xincrement,
             nperseg=nperseg, window="hann", noverlap=noverlap, nfft=nfft,
-            scaling='density', detrend='constant', average='mean'
+            scaling='spectrum', detrend='constant', average='mean'
         )
         mask = frequencies <= f_max_analyze
         freq_filtered = frequencies[mask]
@@ -232,13 +234,17 @@ class App:
 
         self.figure2 = Figure(figsize=(12, 4), dpi=100)
         self.ax2 = self.figure2.add_subplot(111)
-        self.ax2.semilogy(freq_filtered / 1e6, psd_filtered, 'r-', linewidth=1.5)
-        #   self.ax2.semilogy(frequencies/1e6, np.sqrt(psd)*1e9, 'r-', linewidth=1.5)
+        #self.ax2.semilogy(freq_filtered / 1e6, psd_filtered, 'r-', linewidth=1.5)
+        self.ax2.semilogy(freq_filtered/1e6, np.sqrt(psd_filtered)*1e6, 'r-', linewidth=1.5)
         self.ax2.set_xlabel('f (МГц)')
-        self.ax2.set_ylabel('СПМ (В²/Гц)')
-        #  self.ax2.set_ylabel('СПМ (нВ/sqrt(Гц))')
+     #   self.ax2.set_ylabel('СПМ (В²/Гц)')
+        self.ax2.set_ylabel('СПМ (мкВ)')
         self.ax2.set_title('Периодограмма Уэлча')
         self.ax2.grid(True, alpha=0.3)
+
+        # variance = simpson(psd_filtered, x=freq_filtered)
+        # print("RMS_VPP",np.std(voltage, ddof=1)*1000*6)
+        # print("RMS_SPM",np.sqrt(variance)*1000*6)
 
         self.canvas2 = FigureCanvasTkAgg(self.figure2, master=self.oscilloscope_per)
         self.canvas2.draw()
@@ -274,7 +280,7 @@ class App:
             pass
 
     def sum_fft(self):
-        L = 5
+        L = 10
         while self.count_sum_fft < L:
             self.trigger()
             time.sleep(0.3)
@@ -300,7 +306,8 @@ class App:
             voltage = (data + np.abs(yorigin) - yreference) * yincrement
             time_axis = [xorigin + i * xincrement for i in range(len(voltage))]
             if self.chk4_var.get() == 1:
-                folder = filedialog.askdirectory(title = "Выберите папку")                      #check
+                if self.count_sum_fft == 0:
+                    folder = filedialog.askdirectory(title = "Выберите папку")                      #check
                 if not folder:
                     return
                 out_dir = Path(folder)
