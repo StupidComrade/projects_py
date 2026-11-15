@@ -146,6 +146,7 @@ class App:
         self.search_nmr = ttk.Frame(self.notebook)              #check
         self.search_nmr.pack(fill=BOTH, expand=True)
         self.notebook.add(self.search_nmr, text="Поиск")
+        self.notebook.hide(3)
 
         self.label_snmr_start = ttk.Label(self.search_nmr, text="Начальная частота:")
         self.label_snmr_start.grid(row=0, column=0, padx=5, pady=5, sticky="w")
@@ -191,7 +192,7 @@ class App:
 
         self.chk_var_snmr_search_mode = tk.IntVar()
         self.chk_snmr_search_mode = tk.Checkbutton(self.utility, text = "Режим поиска", variable = self.chk_var_snmr_search_mode,
-                                                    command=lambda: self.notebook.select(3) if self.chk_var_snmr_search_mode.get() == 1 else None) # обалдеть тернарный оператор ..)
+                                                    command=lambda:  self.notebook.select(3) if self.chk_var_snmr_search_mode.get() == 1 else self.notebook.hide(3)) # обалдеть тернарный оператор ..)
         self.chk_snmr_search_mode.grid(row=13, column=3, padx=5, pady=5, sticky="e")
 
 
@@ -516,22 +517,26 @@ class App:
             toolbar2.pack(side=tk.TOP, fill=tk.X)
             self.notebook.select(2)
 
+
     def search(self):    #check
-        self.label_snmr_status.config(text="Идёт измерение")
-        self.folder_snmr = filedialog.askdirectory(title = "Выберите папку") 
-        start = float(self.entry_snmr_start.get())
-        stop = float(self.entry_snmr_stop.get())
-        step = float(self.entry_snmr_step.get())
-        self.f_snmr = start
-        while (self.f_snmr <= stop):
-            self.label_snmr_status.config(text="Идёт измерение на {} Гц".format(self.f_snmr))
-            self.load_file()
-            self.load_dac()
-            self.chk3_var.set(1) # вкл burst
-            self.chk_var.set(1) # вкл канал 1
-            self.sum_fft()
-            self.f_snmr += step
-        self.label_snmr_status.config(text="Завершено")
+        if (self.status1['text'] != "Подключено") or (self.status['text'] != "Подключено"):
+            messagebox.showwarning("Предупреждение","Сначала подключите устройства")
+        else:
+            self.label_snmr_status.config(text="Идёт измерение")
+            self.folder_snmr = filedialog.askdirectory(title = "Выберите папку") 
+            start = float(self.entry_snmr_start.get())
+            stop = float(self.entry_snmr_stop.get())
+            step = float(self.entry_snmr_step.get())
+            self.f_snmr = start
+            while (self.f_snmr <= stop):
+                self.label_snmr_status.config(text="Идёт измерение на {} Гц".format(self.f_snmr))
+                self.load_file()
+                self.load_dac()
+                self.chk3_var.set(1) # вкл burst
+                self.burst()
+                self.sum_fft()
+                self.f_snmr += step
+            self.label_snmr_status.config(text="Завершено")
         
 
 
