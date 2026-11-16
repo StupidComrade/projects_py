@@ -236,6 +236,15 @@ class App:
         if self.status1['text'] == "Подключено":
             dots = int(self.mem_depth_options[self.selected_mem_depth_options.get()])
             self.device_osc.write(":ACQuire:MDEPth {}".format(dots))
+            self.device_osc.write(":RUN") 
+            self.device_osc.write(":TIMebase:MAIN:OFFSet 0")
+            srat =  self.device_osc.query(":ACQuire:SRATe?")
+            srat = srat.strip().split(',')
+            time.sleep(0.1)
+            offset =((1/float(srat[0]))*float(dots))               
+            self.device_osc.write(":TIMebase:MAIN:OFFSet {}".format((offset/2)+15e-6)) #позиция по времени  
+            self.device_osc.write(":STOP")
+            self.device_osc.write(":CLEAr")
         else:
             pass
         
@@ -296,7 +305,7 @@ class App:
                 srat = srat.strip().split(',')
                 time.sleep(0.1)
                 offset =((1/float(srat[0]))*float(dots))               
-                self.device_osc.write(":TIMebase:MAIN:OFFSet {}".format(offset/2)) #позиция по времени  
+                self.device_osc.write(":TIMebase:MAIN:OFFSet {}".format((offset/2)+15e-6)) #позиция по времени  
                 self.device_osc.write(":STOP")
                 self.device_osc.write(":CLEAr")
                 self.status1.config(text="Подключено")
@@ -589,31 +598,35 @@ class App:
     def load_file(self):
         if self.chk_var_snmr_search_mode.get() == 1:  #check
             tau1 = float(self.entry_snmr_duration.get())
-            tau2 = 0
-            delay = 0
+          #  tau2 = 0
+          #  delay = 0
             f = float(self.f_snmr)
         else:
             tau1 = float(self.duration.get())
-            tau2 = 0
-            delay = 0
+         #   tau2 = 0
+         #   delay = 0
             f = float(self.frate.get())
         samplerate = float(self.srate.get())
         n1 = round(tau1*samplerate)
-        n2 = round(tau2*samplerate)
-        ndel = round(delay*samplerate)
-        N = n1+n2+ndel
+        if n1 < 300:       # когда длительность меньше 5 мкс, не работает как надо 
+            n3 = (300 - n1)   # поэтому добиваю нулями
+        else: n3=0
+     #   n2 = round(tau2*samplerate)
+     #   ndel = round(delay*samplerate)
+     #   N = n1+n2+ndel
         c1 = round(n1*f/samplerate)
-        c2 = round(n2*f/samplerate)
+      #  c2 = round(n2*f/samplerate)
         t1 = np.linspace(0, c1*2*np.pi, n1)
-        t2 = np.linspace(0, c2*2*np.pi, n2)
-        window1 = signal.windows.hann(np.size(t1))
+      #  t2 = np.linspace(0, c2*2*np.pi, n2)
+      #  window1 = signal.windows.hann(np.size(t1))
         q = 2**15 - 1      
         sine_value1 = (np.sin(t1) * 1 * q)
-        sine_value2 = (np.sin(t2) * 1 * q)
+      #  sine_value2 = (np.sin(t2) * 1 * q)
         normalized1 = np.round(sine_value1).astype(int)
-        normalized2 = np.round(sine_value2).astype(int)
-        arrdel = np.zeros(ndel).astype(int)
-        res = np.concatenate([normalized1, arrdel, normalized2])
+      #  normalized2 = np.round(sine_value2).astype(int)
+      #  arrdel = np.zeros(ndel).astype(int)
+        arr_dop = np.zeros(n3).astype(int)
+        res = np.concatenate([arr_dop, normalized1])
         self.loaded_data = res
         self.status.config(text="Загружено")
         self.file_path = "1"
@@ -674,6 +687,7 @@ class App:
           #  self.device.write(':SOUR{}:VOLT:HIGH 5'.format(channel))
           #  self.device.write(':SOUR{}:VOLT:LOW -5'.format(channel))
             self.device.write(':SOUR{}:FUNC:SEQ:SRAT {}'.format(channel,samplerate))
+            print(len(samplebytes))
             while ( self.device.query('*OPC?') != '1\n'):
                 time.sleep(0.1)
             while (len(samplebytes) > xcount):
